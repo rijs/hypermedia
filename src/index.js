@@ -24,12 +24,13 @@ export default function fn(ripple){
       
       if (!is.obj(res.body)) res.body = {}
 
-      if (res.headers.timestamp) return sup(res)
+      // if (res.headers.timestamp) return sup(res)
       
       if (res.headers.url) return request(opts(res.headers.url, res.headers.http), fetched(ripple)(res)), sup(res)
 
       if (res.headers.parent && !ripple.resources[nearest].headers.timestamp) 
-        return ripple(nearest).once('change', wait(isLoaded)(register)) // console.log('parent not loaded yet')
+        return ripple(nearest).once('change', wait(isLoaded)(register))
+             , debug('parent not loaded yet')
              , sup(res) 
       
       if (res.headers.parent) { 
@@ -44,7 +45,7 @@ export default function fn(ripple){
           if (isURL(value)) {
             ripple(next, value)
             if (next != name) ripple(next).once('change', wait(isLoaded)(register))
-            return /*console.log('loading link'),*/ sup(res)
+            return debug('loading link'), sup(res)
           }
         }
 
@@ -67,6 +68,7 @@ import header from 'utilise/header'
 import extend from 'utilise/extend'
 import parse from 'utilise/parse'
 import wait from 'utilise/wait'
+import noop from 'utilise/noop'
 import key from 'utilise/key'
 import not from 'utilise/not'
 import log from 'utilise/log'
@@ -74,9 +76,10 @@ import err from 'utilise/err'
 import is from 'utilise/is'
 import fn from 'utilise/fn'
 import to from 'utilise/to'
+import request from 'request'
 log = log('[ri/hypermedia]')
 err = err('[ri/hypermedia]')
-var request = require('request')
+var debug = noop
 
 function parent(ripple){
   return function(key){
@@ -106,7 +109,7 @@ function fetched(ripple){
       body = parse(body)
       if (e) return err(e)
       if (response.statusCode != 200) return err(body.message)
-      // log('fetched', res.name)
+      debug('fetched', res.name)
       res.headers.timestamp = new Date()
       ripple(res.name, body)
     }
