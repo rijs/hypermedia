@@ -1,4 +1,5 @@
 var expect = require('chai').expect
+  , css = require('rijs.css')
   , core = require('rijs.core')
   , data = require('rijs.data')
   , hypermedia = require('./')
@@ -7,7 +8,7 @@ var expect = require('chai').expect
   , http = auth()
 
 describe('Hypermedia API', function() {
-  this.timeout(10000)
+  this.timeout(15000)
 
   it('should load root resource', function(done){  
     var ripple = hypermedia(data(core()))
@@ -25,6 +26,7 @@ describe('Hypermedia API', function() {
       if (!user.login) return 
       expect('github' in ripple.resources).to.be.ok
       expect('github.current_user_url' in ripple.resources).to.be.ok
+      expect(ripple.resources['github.current_user_url'].headers.timestamp).to.be.ok
       expect(user.login).to.be.equal('OGLES')
       done()
     })
@@ -63,22 +65,6 @@ describe('Hypermedia API', function() {
     })
   })
 
-  // it('should alias from link', function(done){  
-  //   var ripple = hypermedia(data(core()))
-  //   ripple('github', 'https://api.github.com', http)
-  //   ripple('repos', 'github.current_user_url.repos_url.0')
-  //     .on('change', function(d){
-  //       console.log('changed', d)
-  //     })
-
-  //   console.log('listener registered', ripple.resources['github.current_user_url.repos_url.0'].body.on.change.length)
-
-  //   // setTimeout(function(){
-  //   //   expect(ripple('github.current_user_url.repos_url.0').name).to.eql('browser-repl')
-  //   //   done()
-  //   // }, 5000)
-  // })
-
   it('should use cached resource if available', function(done){  
     var ripple = hypermedia(data(core()))
       , count = 0
@@ -107,7 +93,6 @@ describe('Hypermedia API', function() {
     })
   })
 
-
   it('should fail if cannot fetch resource - auth', function(done){  
     var ripple = hypermedia(data(core()))
     ripple('github', 'https://api.api.api.api.com').on('change', Function('throw Error'))
@@ -117,6 +102,99 @@ describe('Hypermedia API', function() {
       expect(ripple('github')).to.be.eql({})
       done()
     })
+  })
+
+  it('should alias resource', function(done){  
+    var ripple = hypermedia(data(core()))
+    ripple('github', 'https://api.github.com', { http: http })
+    ripple('repo', { owner: 'pemrouz', repo: 'ripple' }, { link: 'github.repository_url' })
+      .on('change', function(repo){
+        if (!repo.id) return 
+        expect('repo' in ripple.resources).to.be.ok
+        expect('github' in ripple.resources).to.be.ok
+        expect('github.repository_url' in ripple.resources).to.be.ok
+        expect(ripple('repo').id).to.be.equal(21631189)
+        expect(ripple.resources['repo'].headers.timestamp).to.be.ok
+        done()
+      })
+  })
+
+  it('should expand parameterised links', function(done){  
+    var ripple = hypermedia(data(core()))
+    ripple('github', 'https://api.github.com', { http: http })
+    ripple('github.repository_url', { owner: 'pemrouz', repo: 'ripple' })
+      .on('change', function(repo){
+        if (!repo.id) return 
+        expect('github' in ripple.resources).to.be.ok
+        expect('github.repository_url' in ripple.resources).to.be.ok
+        expect(ripple.resources['github.repository_url'].headers.timestamp).to.be.ok
+        expect(repo.id).to.be.equal(21631189)
+        done()
+      })
+
+    expect(ripple.resources['github.repository_url'].headers.timestamp).to.not.be.ok
+    expect(ripple.resources['github.repository_url'].body.id).to.not.be.ok
+  })
+
+  it('should expand optional params in links', function(done){  
+    var ripple = hypermedia(data(core()))
+    ripple('repo', 'https://api.github.com/repos/pemrouz/ripple', { http: http })
+    ripple('repo.issues_url', { number: 1 })
+      .on('change', function(issue){
+        if (!issue.id) return 
+        expect('repo' in ripple.resources).to.be.ok
+        expect('repo.issues_url' in ripple.resources).to.be.ok
+        expect(ripple('repo.issues_url').id).to.be.equal(39576741)
+        expect(ripple.resources['repo.issues_url'].headers.timestamp).to.be.ok
+        done()
+      })
+  })
+
+  it('should expand multiple parameterised links in path', function(done){  
+    var ripple = hypermedia(data(core()))
+    ripple('github', 'https://api.github.com', { http: http })
+    ripple('issue', { owner: 'pemrouz', repo: 'ripple', number: 1 }, { link: 'github.repository_url.issues_url' })
+      .on('change', function(issue){
+        if (!issue.id) return 
+        expect('issue' in ripple.resources).to.be.ok
+        expect('github' in ripple.resources).to.be.ok
+        expect('github.repository_url' in ripple.resources).to.be.ok
+        expect('github.repository_url.issues_url' in ripple.resources).to.be.ok
+        expect(ripple('issue').id).to.be.equal(39576741)
+        expect(ripple.resources['issue'].headers.timestamp).to.be.ok
+        expect(issue.id).to.be.equal(39576741)
+        done()
+      })
+
+    expect(ripple.resources['issue'].headers.timestamp).to.not.be.ok
+    expect(ripple.resources['issue'].body.id).to.not.be.ok
+  })
+
+  it('should remove undefined params from url', function(done){  
+    var ripple = hypermedia(data(core()))
+    ripple('github', 'https://api.github.com', { http: http })
+    ripple('issues', { owner: 'pemrouz', repo: 'ripple' }, { link: 'github.repository_url.issues_url' })
+      .on('change', function(issues){
+        if (!issues.length) return 
+        expect('issues' in ripple.resources).to.be.ok
+        expect('github' in ripple.resources).to.be.ok
+        expect('github.repository_url' in ripple.resources).to.be.ok
+        expect('github.repository_url.issues_url' in ripple.resources).to.be.ok
+        expect(ripple('issues').length).to.be.above(10)
+        expect(ripple.resources['issues'].headers.timestamp).to.be.ok
+        expect(issues.length).to.be.above(10)
+        done()
+      })
+
+    expect(ripple.resources['issues'].headers.timestamp).to.not.be.ok
+    expect(ripple.resources['issues'].body.id).to.not.be.ok
+  })
+
+  it('should not attempt to register css resources', function(){
+    var ripple = hypermedia(data(css(core())))
+    ripple('x')
+    ripple('x.css')
+    expect(ripple.resources['x.css'].headers['content-type']).to.eql('text/css')
   })
 
 })

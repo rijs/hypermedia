@@ -14,37 +14,39 @@ function fn(ripple) {
   ripple.on("change.hypermedia", trickle(ripple));
   ripple.types["application/hypermedia"] = {
     header: "application/hypermedia",
+    render: key("types.application/data.render")(ripple),
     priority: 10,
     check: function check(res) {
-      return header("content-type", "application/hypermedia")(ripple.resources[res.name]) || isURL(res.body) || !res.body && parent(ripple)(res.name);
+      return header("content-type", "application/hypermedia")(ripple.resources[res.name]) || isURL(res.body) || parent(ripple)(res.headers.link) || parent(ripple)(res.name) && !includes(".css")(res.name);
     },
     parse: function parse(res) {
-
       var name = res.name,
+          body = res.body,
           nearest = parent(ripple)(name),
           sup = ripple.types["application/data"].parse,
           register = function (r) {
-        return ripple({ name: name });
+        return ripple({ name: name, body: body });
       },
-          isLoaded = function (r) {
-        return ripple.resources[nearest].headers.timestamp;
-      };
+          isLoaded = loaded(ripple),
+          timestamp = new Date();
 
-      if (isURL(res.body)) res.headers.url = res.body;
-
-      if (!res.body && nearest) res.headers.parent = nearest;
+      if (isLoaded(name)()) {
+        return sup(res);
+      }if (res.headers.link) {
+        return (ripple(res.headers.link, res.body).once("change", wait(isLoaded(res.headers.link))(function (r) {
+          return ripple(name, r, { timestamp: timestamp });
+        })), sup(res));
+      }if (isURL(res.body)) res.headers.url = res.body;
 
       if (nearest && ripple.resources[nearest].headers.http) res.headers.http = ripple.resources[nearest].headers.http;
 
       if (!is.obj(res.body)) res.body = {};
 
-      // if (res.headers.timestamp) return sup(res)
-
       if (res.headers.url) {
         return (request(opts(res.headers.url, res.headers.http), fetched(ripple)(res)), sup(res));
-      }if (res.headers.parent && !ripple.resources[nearest].headers.timestamp) {
-        return (ripple(nearest).once("change", wait(isLoaded)(register)), debug("parent not loaded yet"), sup(res));
-      }if (res.headers.parent) {
+      }if (nearest && !ripple.resources[nearest].headers.timestamp) {
+        return (ripple(nearest).once("change", wait(isLoaded(nearest))(register)), debug("parent not loaded yet"), sup(res));
+      }if (nearest) {
         var parts = subtract(name, nearest),
             value;
 
@@ -54,13 +56,13 @@ function fn(ripple) {
           value = key(path)(ripple(nearest));
 
           if (isURL(value)) {
-            ripple(next, value);
-            if (next != name) ripple(next).once("change", wait(isLoaded)(register));
+            ripple(next, expand(value, res.body));
+            if (next != name) ripple(next).once("change", wait(isLoaded(nearest))(register));
             return (debug("loading link"), sup(res));
           }
         }
 
-        res.headers.timestamp = new Date();
+        res.headers.timestamp = timestamp;
         res.body = is.obj(value) ? value : { value: value };
         log("loaded".green, name);
         return sup(res);
@@ -85,6 +87,8 @@ var wait = _interopRequire(require("utilise/wait"));
 
 var noop = _interopRequire(require("utilise/noop"));
 
+var keys = _interopRequire(require("utilise/keys"));
+
 var key = _interopRequire(require("utilise/key"));
 
 var not = _interopRequire(require("utilise/not"));
@@ -103,10 +107,22 @@ var request = _interopRequire(require("request"));
 
 log = log("[ri/hypermedia]");
 err = err("[ri/hypermedia]");
-var debug = noop;
+var debug = log;
+
+function expand(url, params) {
+  keys(params).map(function (k) {
+    url = url.replace("{" + k + "}", params[k]);
+    url = url.replace("{/" + k + "}", "/" + params[k]);
+  });
+
+  url = url.replace(/\{.+?\}/g, "");
+  debug("url", url);
+  return url;
+}
 
 function parent(ripple) {
   return function (key) {
+    if (!key) return false;
     var parts = key.split(".");
     for (var i = parts.length - 1; i > 0; i--) {
       var candidate = parts.slice(0, i).join(".");
@@ -119,6 +135,14 @@ function subtract(a, b) {
   return a.slice(b.length + 1).split(".");
 }
 
+function loaded(ripple) {
+  return function (name) {
+    return function (r) {
+      return ripple.resources[name] && ripple.resources[name].headers.timestamp;
+    };
+  };
+}
+
 function isURL(d) {
   return includes("://")(d);
 }
@@ -128,13 +152,13 @@ function opts(url, headers) {
 }
 
 function fetched(ripple) {
-  return function (res) {
+  return function (res, url) {
     return function (e, response, body) {
       body = parse(body);
-      if (e) return err(e);
-      if (response.statusCode != 200) return err(body.message);
+      if (e) return err(e, url);
+      if (response.statusCode != 200) return err(body.message, url);
       debug("fetched", res.name);
-      res.headers.timestamp = new Date();
+      ripple.resources[res.name].headers.timestamp = new Date();
       ripple(res.name, body);
     };
   };
@@ -146,7 +170,7 @@ function trickle(ripple) {
     return header("content-type", "application/hypermedia")(res) && ripple.resources[res.name].body.emit("change", to.arr(args), not(is["in"](["bubble"])));
   };
 }
-},{"request":201,"utilise/err":249,"utilise/extend":250,"utilise/fn":251,"utilise/header":253,"utilise/includes":254,"utilise/is":255,"utilise/key":256,"utilise/log":258,"utilise/noop":259,"utilise/not":260,"utilise/parse":262,"utilise/to":264,"utilise/wait":265}],2:[function(require,module,exports){
+},{"request":201,"utilise/err":249,"utilise/extend":250,"utilise/fn":251,"utilise/header":253,"utilise/includes":254,"utilise/is":255,"utilise/key":256,"utilise/keys":257,"utilise/log":258,"utilise/noop":259,"utilise/not":260,"utilise/parse":262,"utilise/to":264,"utilise/wait":265}],2:[function(require,module,exports){
 ;(function () {
 
   var object = typeof exports != 'undefined' ? exports : this; // #8: web workers

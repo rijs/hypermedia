@@ -33,6 +33,18 @@ You can pass any extra headers you want (in this case, basic auth) to be used in
 ripple('github', 'https://api.github.com', { http })
 ```
 
+You expand parameterised routes and also alias resources:
+
+```js
+ripple('repo', { owner: 'pemrouz', repo: 'ripple' }, { link: 'github.repository_url' })
+```
+
+Or even traverse multiple parameterised links:
+
+```js
+ripple('issue', { owner: 'pemrouz', repo: 'ripple', number: 1 }, { link: 'github.repository_url.issues_url' })
+```
+
 # TODO
 
 * [ ] Add profiles for dot notation to be able to traverse other hypermedia formats (HTML, HAL, Siren, Collection, etc) - see [Jon Moore's presentation](http://www.infoq.com/presentations/web-api-html) for HTML example.
