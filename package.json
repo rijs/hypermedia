@@ -1,6 +1,6 @@
 {
   "name": "rijs.hypermedia",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "main": "dist",
   "author": "Pedram Emrouznejad (https://github.com/pemrouz)",
   "repository": {
@@ -29,7 +29,8 @@
     "istanbul": "*",
     "mocha": "*",
     "mocha-lcov-reporter": "*",
-    "uglify-js": "*","rijs.components": "*",
+    "uglify-js": "*",
+    "rijs.components": "*",
     "rijs.core": "*",
     "rijs.css": "*",
     "rijs.data": "*",
