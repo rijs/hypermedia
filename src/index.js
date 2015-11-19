@@ -1,7 +1,7 @@
 // -------------------------------------------
-// Exposes a convenient global instance 
+// Enables following hypermedia links
 // -------------------------------------------
-export default function fn(ripple){
+export default function hypermedia(ripple){
   log('creating')
   ripple.on("change.hypermedia", trickle(ripple))
   ripple.types['application/hypermedia'] = {
@@ -86,15 +86,13 @@ import noop from 'utilise/noop'
 import keys from 'utilise/keys'
 import key from 'utilise/key'
 import not from 'utilise/not'
-import log from 'utilise/log'
-import err from 'utilise/err'
 import is from 'utilise/is'
 import fn from 'utilise/fn'
 import to from 'utilise/to'
 import request from 'request'
-log = log('[ri/hypermedia]')
-err = err('[ri/hypermedia]')
-var debug = log
+var log = require('utilise/log')('[ri/hypermedia]')
+  , err = require('utilise/err')('[ri/hypermedia]')
+  , debug = noop
 
 function expand(url, params) {
   keys(params)

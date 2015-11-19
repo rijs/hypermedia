@@ -1,8 +1,8 @@
 var expect = require('chai').expect
-  , css = require('rijs.css')
-  , core = require('rijs.core')
-  , data = require('rijs.data')
-  , hypermedia = require('./')
+  , css = require('rijs.css').default
+  , core = require('rijs.core').default
+  , data = require('rijs.data').default
+  , hypermedia = require('./').default
   , keys = require('utilise/keys')
   , time = require('utilise/time')
   , http = auth()
@@ -109,7 +109,6 @@ describe('Hypermedia API', function() {
     ripple('github', 'https://api.github.com', { http: http })
     ripple('repo', { owner: 'pemrouz', repo: 'ripple' }, { link: 'github.repository_url' })
       .on('change', function(repo){
-        if (!repo.id) return 
         expect('repo' in ripple.resources).to.be.ok
         expect('github' in ripple.resources).to.be.ok
         expect('github.repository_url' in ripple.resources).to.be.ok
@@ -155,7 +154,6 @@ describe('Hypermedia API', function() {
     ripple('github', 'https://api.github.com', { http: http })
     ripple('issue', { owner: 'pemrouz', repo: 'ripple', number: 1 }, { link: 'github.repository_url.issues_url' })
       .on('change', function(issue){
-        if (!issue.id) return 
         expect('issue' in ripple.resources).to.be.ok
         expect('github' in ripple.resources).to.be.ok
         expect('github.repository_url' in ripple.resources).to.be.ok
@@ -175,7 +173,6 @@ describe('Hypermedia API', function() {
     ripple('github', 'https://api.github.com', { http: http })
     ripple('issues', { owner: 'pemrouz', repo: 'ripple' }, { link: 'github.repository_url.issues_url' })
       .on('change', function(issues){
-        if (!issues.length) return 
         expect('issues' in ripple.resources).to.be.ok
         expect('github' in ripple.resources).to.be.ok
         expect('github.repository_url' in ripple.resources).to.be.ok
