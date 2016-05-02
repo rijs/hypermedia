@@ -146,10 +146,9 @@ function fetched(ripple){
   }
 }
 
-function trickle(ripple){
-  return function(res){
-    var args = [arguments[0].body, arguments[1]]
-    return header('content-type', 'application/hypermedia')(res)
-        && ripple.resources[res.name].body.emit('change', to.arr(args), not(is.in(['bubble'])))
-  }
-}
+const trickle = ripple => (name, change) => 
+  header('content-type', 'application/hypermedia')(ripple.resources[name]) && 
+    ripple
+      .resources[name]
+      .body
+      .emit('change', [change || null], not(is.in(['bubble'])))

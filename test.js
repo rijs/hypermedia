@@ -13,7 +13,8 @@ describe('Hypermedia API', function() {
   it('should load root resource', function(done){  
     var ripple = hypermedia(data(core()))
     ripple('github', 'https://api.github.com', { http: http })
-    ripple('github').once('change', function(github){
+    ripple('github').once('change', function(change){
+      var github = change.value
       expect(keys(github).length).to.be.gt(10)
       done()
     })
@@ -22,7 +23,8 @@ describe('Hypermedia API', function() {
   it('should follow links', function(done){  
     var ripple = hypermedia(data(core()))
     ripple('github', 'https://api.github.com', { http: http })
-    ripple('github.current_user_url').on('change', function(user){
+    ripple('github.current_user_url').on('change', function(change){
+      var user = change.value
       if (!user.login) return 
       expect('github' in ripple.resources).to.be.ok
       expect('github.current_user_url' in ripple.resources).to.be.ok
@@ -35,7 +37,8 @@ describe('Hypermedia API', function() {
   it('should load and cache intermediate links', function(done){  
     var ripple = hypermedia(data(core()))
     ripple('github', 'https://api.github.com', { http: http })
-    ripple('github.current_user_url.id').on('change', function(user){
+    ripple('github.current_user_url.id').on('change', function(change){
+      var user = change.value
       if (!user.value) return 
       expect('github' in ripple.resources).to.be.ok
       expect('github.current_user_url' in ripple.resources).to.be.ok
@@ -48,7 +51,8 @@ describe('Hypermedia API', function() {
   it('should work with arrays', function(done){  
     var ripple = hypermedia(data(core()))
     ripple('github', 'https://api.github.com', { http: http })
-    ripple('github.current_user_url.repos_url.0').on('change', function(repo){
+    ripple('github.current_user_url.repos_url.0').on('change', function(change){
+      var repo = change.value
       if (!repo.name) return
       expect(repo.name).to.eql('builder')
       done()
@@ -58,7 +62,8 @@ describe('Hypermedia API', function() {
   it('should traverse deep simple keys too', function(done){  
     var ripple = hypermedia(data(core()))
     ripple('github', 'https://api.github.com', { http: http })
-    ripple('github.current_user_url.repos_url.0.owner.login').on('change', function(login){
+    ripple('github.current_user_url.repos_url.0.owner.login').on('change', function(change){
+      var login = change.value
       if (!login.value) return
       expect(login.value).to.eql('OGLES')
       done()
@@ -71,7 +76,8 @@ describe('Hypermedia API', function() {
 
     ripple('github', 'https://api.github.com', { http: http })
     
-    ripple('github.current_user_url').on('change.first', function(user){ 
+    ripple('github.current_user_url').on('change.first', function(change){ 
+      var user = change.value
       if (!user.login) return
       ripple('github.current_user_url').on('change.second', Function('throw Error')) 
       time(1000, done)
@@ -81,7 +87,8 @@ describe('Hypermedia API', function() {
   it('should fail if cannot fetch resource - general', function(done){  
     var ripple = hypermedia(data(core()))
     ripple('github', 'https://api.github.com')
-    ripple('github.current_user_url').on('change', function(body){
+    ripple('github.current_user_url').on('change', function(change){
+      var body = change.value
       expect(body).to.be.eql({})
     })
 
@@ -108,11 +115,14 @@ describe('Hypermedia API', function() {
     var ripple = hypermedia(data(core()))
     ripple('github', 'https://api.github.com', { http: http })
     ripple('repo', { owner: 'pemrouz', repo: 'ripple' }, { link: 'github.repository_url' })
-      .on('change', function(repo){
+      .on('change', function(change){
+        var repo = change.value
+        if (!ripple('repo').value) return
+        if (!repo.id) return
         expect('repo' in ripple.resources).to.be.ok
         expect('github' in ripple.resources).to.be.ok
         expect('github.repository_url' in ripple.resources).to.be.ok
-        expect(ripple('repo').id).to.be.equal(21631189)
+        expect(ripple('repo').value.id).to.be.equal(21631189)
         expect(ripple.resources['repo'].headers.timestamp).to.be.ok
         done()
       })
@@ -122,7 +132,8 @@ describe('Hypermedia API', function() {
     var ripple = hypermedia(data(core()))
     ripple('github', 'https://api.github.com', { http: http })
     ripple('github.repository_url', { owner: 'pemrouz', repo: 'ripple' })
-      .on('change', function(repo){
+      .on('change', function(change){
+        var repo = change.value
         if (!repo.id) return 
         expect('github' in ripple.resources).to.be.ok
         expect('github.repository_url' in ripple.resources).to.be.ok
@@ -139,8 +150,10 @@ describe('Hypermedia API', function() {
     var ripple = hypermedia(data(core()))
     ripple('repo', 'https://api.github.com/repos/pemrouz/ripple', { http: http })
     ripple('repo.issues_url', { number: 1 })
-      .on('change', function(issue){
+      .on('change', function(change){
+        var issue = change.value
         if (!issue.id) return 
+        if (!ripple('repo.issues_url')) return
         expect('repo' in ripple.resources).to.be.ok
         expect('repo.issues_url' in ripple.resources).to.be.ok
         expect(ripple('repo.issues_url').id).to.be.equal(39576741)
@@ -153,12 +166,15 @@ describe('Hypermedia API', function() {
     var ripple = hypermedia(data(core()))
     ripple('github', 'https://api.github.com', { http: http })
     ripple('issue', { owner: 'pemrouz', repo: 'ripple', number: 1 }, { link: 'github.repository_url.issues_url' })
-      .on('change', function(issue){
+      .on('change', function(change){
+        var issue = change.value
+        if (!ripple('issue').value) return
+        if (!issue.id) return
         expect('issue' in ripple.resources).to.be.ok
         expect('github' in ripple.resources).to.be.ok
         expect('github.repository_url' in ripple.resources).to.be.ok
         expect('github.repository_url.issues_url' in ripple.resources).to.be.ok
-        expect(ripple('issue').id).to.be.equal(39576741)
+        expect(ripple('issue').value.id).to.be.equal(39576741)
         expect(ripple.resources['issue'].headers.timestamp).to.be.ok
         expect(issue.id).to.be.equal(39576741)
         done()
@@ -172,12 +188,15 @@ describe('Hypermedia API', function() {
     var ripple = hypermedia(data(core()))
     ripple('github', 'https://api.github.com', { http: http })
     ripple('issues', { owner: 'pemrouz', repo: 'ripple' }, { link: 'github.repository_url.issues_url' })
-      .on('change', function(issues){
+      .on('change', function(change){
+        var issues = change.value
+        if (!ripple('issues').value) return
+        if (!issues.length) return
         expect('issues' in ripple.resources).to.be.ok
         expect('github' in ripple.resources).to.be.ok
         expect('github.repository_url' in ripple.resources).to.be.ok
         expect('github.repository_url.issues_url' in ripple.resources).to.be.ok
-        expect(ripple('issues').length).to.be.above(10)
+        expect(ripple('issues').value.length).to.be.above(10)
         expect(ripple.resources['issues'].headers.timestamp).to.be.ok
         expect(issues.length).to.be.above(10)
         done()

@@ -188,9 +188,8 @@ function fetched(ripple) {
   };
 }
 
-function trickle(ripple) {
-  return function (res) {
-    var args = [arguments[0].body, arguments[1]];
-    return (0, _header2.default)('content-type', 'application/hypermedia')(res) && ripple.resources[res.name].body.emit('change', _to2.default.arr(args), (0, _not2.default)(_is2.default.in(['bubble'])));
+var trickle = function trickle(ripple) {
+  return function (name, change) {
+    return (0, _header2.default)('content-type', 'application/hypermedia')(ripple.resources[name]) && ripple.resources[name].body.emit('change', [change || null], (0, _not2.default)(_is2.default.in(['bubble'])));
   };
-}
+};
